@@ -1,9 +1,9 @@
-name: Deploy Next.js to EC2
+name: Deploy Next.js Docker App to EC2
 
 on:
   push:
     branches:
-      - main  # Trigger on push to main branch
+      - main  # Trigger deployment on push to main branch
 
 jobs:
   deploy:
@@ -14,21 +14,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Setup Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
-      # Step 3: Install dependencies and build Next.js
-      - name: Install dependencies and build Next.js
+      # Step 2: Build Docker image locally (optional, can skip if building on EC2)
+      - name: Build Docker image (for caching)
         working-directory: ./domain_scan
         run: |
-          npm ci
-          npm run build
+          docker build -t nextjs-app .
 
-      # Step 4: Ensure target folder exists on EC2
-      - name: Create app directory on EC2
+      # Step 3: Ensure target directory exists on EC2
+      - name: Create target folder on EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -38,20 +31,20 @@ jobs:
             mkdir -p "${{ secrets.EC2_PATH }}"
             chown ${{ secrets.EC2_USER }} "${{ secrets.EC2_PATH }}"
 
-      # Step 5: Copy built files to EC2
-      - name: Copy project to EC2
+      # Step 4: Copy project files, Dockerfile, and docker-compose.yml to EC2
+      - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "domain_scan/.next,domain_scan/public,domain_scan/package.json,domain_scan/next.config.js"
+          source: "domain_scan/*,domain_scan/Dockerfile,domain_scan/docker-compose.yml"
           target: "${{ secrets.EC2_PATH }}"
           rm: true
           overwrite: true
 
-      # Step 6: Install server dependencies and restart NGINX
-      - name: Setup app on EC2
+      # Step 5: Run Docker Compose on EC2
+      - name: Deploy app on EC2 with Docker
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -59,8 +52,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd "${{ secrets.EC2_PATH }}"
-            npm ci --production
-
-            # Reload NGINX to serve the new build
-            sudo nginx -t
-            sudo systemctl reload nginx
+            docker-compose down
+            docker-compose up -d --build
+            docker system prune -f
