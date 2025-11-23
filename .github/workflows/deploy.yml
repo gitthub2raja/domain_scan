@@ -1,9 +1,9 @@
-name: Deploy Next.js Docker to EC2
+name: Deploy Next.js to EC2
 
 on:
   push:
     branches:
-      - main  # Trigger deployment on push to main branch
+      - main  # Trigger on push to main branch
 
 jobs:
   deploy:
@@ -14,39 +14,44 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Set up Docker Buildx (optional, for advanced builds)
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
 
-      # Step 3: Log in to Docker (if using Docker Hub or private registry)
-      # - name: Log in to Docker Hub
-      #   uses: docker/login-action@v2
-      #   with:
-      #     username: ${{ secrets.DOCKER_USERNAME }}
-      #     password: ${{ secrets.DOCKER_PASSWORD }}
+      # Step 3: Install dependencies and build Next.js
+      - name: Install dependencies and build Next.js
+        working-directory: ./domain_scan
+        run: |
+          npm ci
+          npm run build
 
-      # Step 4: Build Docker image
-      - name: Build Docker image
-        run: docker build -t nextjs-app:latest .
+      # Step 4: Ensure target folder exists on EC2
+      - name: Create app directory on EC2
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p "${{ secrets.EC2_PATH }}"
+            chown ${{ secrets.EC2_USER }} "${{ secrets.EC2_PATH }}"
 
-      # Step 5: Save Docker image as a tar (optional if copying to EC2)
-      - name: Save Docker image
-        run: docker save nextjs-app:latest -o nextjs-app.tar
-
-      # Step 6: Copy Docker image to EC2
-      - name: Copy Docker image to EC2
+      # Step 5: Copy built files to EC2
+      - name: Copy project to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "nextjs-app.tar"
+          source: "domain_scan/.next,domain_scan/public,domain_scan/package.json,domain_scan/next.config.js"
           target: "${{ secrets.EC2_PATH }}"
           rm: true
           overwrite: true
 
-      # Step 7: Load Docker image and restart container on EC2
-      - name: Load Docker image and deploy on EC2
+      # Step 6: Install server dependencies and restart NGINX
+      - name: Setup app on EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -54,15 +59,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd "${{ secrets.EC2_PATH }}"
+            npm ci --production
 
-            # Load Docker image
-            docker load -i nextjs-app.tar
-
-            # Stop existing container
-            docker rm -f nextjs-app || true
-
-            # Run container
-            docker run -d \
-              --name nextjs-app \
-              -p 80:3000 \
-              nextjs-app:latest
+            # Reload NGINX to serve the new build
+            sudo nginx -t
+            sudo systemctl reload nginx
