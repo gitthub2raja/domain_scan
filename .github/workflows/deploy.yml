@@ -1,4 +1,4 @@
-name: Deploy Next.js App to EC2 with Docker
+name: Deploy Next.js Docker to EC2
 
 on:
   push:
@@ -6,66 +6,44 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository
+      # Step 1: Checkout repo
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Setup Node.js (needed if you do local build)
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-
+      # Step 2: Build Docker image
       - name: Build Docker image
-        run: |
-          docker build -t next-app:latest .
+        run: docker build -t next-app:latest .
 
+      # Step 3: Save Docker image as tar
+      - name: Save Docker image
+        run: docker save next-app:latest -o next-app.tar
 
-      # 4️⃣ Ensure target folder exists on EC2
-      - name: Ensure target folder on EC2
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            mkdir -p /home/ubuntu/domain_scan
-            chown ubuntu:ubuntu /home/ubuntu/domain_scan
-
-      # 5️⃣ Copy project files to EC2
-      - name: Copy files to EC2
+      # Step 4: Copy Docker image to EC2
+      - name: Copy Docker image to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "domain_scan/"
-          target: "/home/ubuntu/domain_scan"
+          source: "next-app.tar"
+          target: "/home/${{ secrets.EC2_USER }}/domain_scan/next-app.tar"
           rm: true
           overwrite: true
 
-      # 6️⃣ SSH into EC2 and deploy using Docker Compose
-      - name: Deploy on EC2
+      # Step 5: Load Docker image and restart container on EC2
+      - name: Deploy Docker container on EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ubuntu/domain_scan
-
-            # Pull latest Docker images if using remote registry
-            docker-compose pull || true
-
-            # Stop any running containers
-            docker-compose down || true
-
-            # Build and start containers
+            cd /home/${{ secrets.EC2_USER }}/domain_scan
+            docker load -i next-app.tar
+            docker stop next-app || true
+            docker rm next-app || true
             docker-compose up -d --build
-
-            # Optional: show running containers
-            docker ps -a
