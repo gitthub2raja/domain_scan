@@ -3,7 +3,7 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # trigger on push to main
+      - main
 
 jobs:
   deploy:
@@ -18,6 +18,16 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Ensure target folder exists on EC2
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            mkdir -p ${{ secrets.APP_DIR }}
+            chown ${{ secrets.EC2_USER }} ${{ secrets.APP_DIR }}
+
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -26,8 +36,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "."
           target: ${{ secrets.APP_DIR }}
+          rm: true        # remove tmp files after copy
+          overwrite: true # overwrite existing files
 
-      - name: SSH commands
+      - name: Install dependencies and restart app
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
