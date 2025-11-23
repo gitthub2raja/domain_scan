@@ -20,10 +20,10 @@ jobs:
         with:
           node-version: '20'
 
-      # 3️⃣ Build Docker image locally (optional, can also build on EC2)
       - name: Build Docker image
         run: |
-          docker build -t next-app:latest ./domain_scan
+          docker build -t next-app:latest .
+
 
       # 4️⃣ Ensure target folder exists on EC2
       - name: Ensure target folder on EC2
