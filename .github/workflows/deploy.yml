@@ -1,4 +1,4 @@
-name: Deploy Next.js Docker App to EC2
+name: Deploy Next.js App to EC2 with Docker
 
 on:
   push:
@@ -10,12 +10,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repository
+      # 1️⃣ Checkout repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Ensure target folder exists on EC2
-      - name: Create target folder on EC2
+      # 2️⃣ Setup Node.js (needed if you do local build)
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      # 3️⃣ Build Docker image locally (optional, can also build on EC2)
+      - name: Build Docker image
+        run: |
+          docker build -t next-app:latest ./domain_scan
+
+      # 4️⃣ Ensure target folder exists on EC2
+      - name: Ensure target folder on EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -23,22 +34,22 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             mkdir -p /home/ubuntu/domain_scan
-            chown ${{ secrets.EC2_USER }} /home/ubuntu/domain_scan
+            chown ubuntu:ubuntu /home/ubuntu/domain_scan
 
-      # Step 3: Copy project files, Dockerfile, and docker-compose.yml to EC2
+      # 5️⃣ Copy project files to EC2
       - name: Copy files to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: "domain_scan/*,domain_scan/Dockerfile,domain_scan/docker-compose.yml"
+          source: "domain_scan/"
           target: "/home/ubuntu/domain_scan"
           rm: true
           overwrite: true
 
-      # Step 4: Deploy app on EC2 using Docker Compose
-      - name: Deploy app on EC2 with Docker
+      # 6️⃣ SSH into EC2 and deploy using Docker Compose
+      - name: Deploy on EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -46,6 +57,15 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/domain_scan
-            docker-compose down
+
+            # Pull latest Docker images if using remote registry
+            docker-compose pull || true
+
+            # Stop any running containers
+            docker-compose down || true
+
+            # Build and start containers
             docker-compose up -d --build
-            docker system prune -f
+
+            # Optional: show running containers
+            docker ps -a
