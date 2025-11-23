@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-cyber-neon-cyan/20;
+  }
+  
+  body {
+    @apply bg-cyber-dark text-cyber-neon-cyan;
+    font-family: 'Courier New', monospace;
+    overflow-x: hidden;
+  }
+}
+
+@layer utilities {
+  .cyber-grid {
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: grid-move 20s linear infinite;
+  }
+  
+  @keyframes grid-move {
+    0% { background-position: 0 0; }
+    100% { background-position: 50px 50px; }
+  }
+  
+  .hologram-effect {
+    position: relative;
+    background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(0, 255, 65, 0.1));
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    box-shadow: 
+      0 0 10px rgba(0, 255, 255, 0.3),
+      inset 0 0 10px rgba(0, 255, 255, 0.1);
+  }
+  
+  .hologram-effect::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+      rgba(0, 255, 255, 0.5),
+      rgba(0, 255, 65, 0.5),
+      rgba(0, 128, 255, 0.5),
+      rgba(0, 255, 255, 0.5));
+    z-index: -1;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.3s;
+    animation: border-glow 3s linear infinite;
+  }
+  
+  .hologram-effect:hover::before {
+    opacity: 1;
+  }
+  
+  @keyframes border-glow {
+    0%, 100% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(90deg); }
+  }
+  
+  .circuit-line {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .circuit-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+      transparent,
+      rgba(0, 255, 255, 0.4),
+      transparent);
+    animation: circuit-flow 3s linear infinite;
+  }
+  
+  @keyframes circuit-flow {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+  
+  .scan-radar {
+    position: relative;
+  }
+  
+  .scan-radar::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      rgba(0, 255, 255, 0.1) 45deg,
+      rgba(0, 255, 255, 0.3) 50deg,
+      rgba(0, 255, 255, 0.1) 55deg,
+      transparent 60deg
+    );
+    transform: translate(-50%, -50%);
+    animation: radar-sweep 4s linear infinite;
+    pointer-events: none;
+  }
+  
+  .text-glow {
+    text-shadow: 
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 30px currentColor;
+  }
+  
+  .neon-border {
+    border: 2px solid rgba(0, 255, 255, 0.5);
+    box-shadow: 
+      0 0 10px rgba(0, 255, 255, 0.5),
+      inset 0 0 10px rgba(0, 255, 255, 0.1);
+  }
+  
+  .neon-border:hover {
+    border-color: rgba(0, 255, 65, 0.8);
+    box-shadow: 
+      0 0 20px rgba(0, 255, 65, 0.8),
+      inset 0 0 20px rgba(0, 255, 65, 0.2);
+  }
+}
+
