@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Setup Node.js
+      # Step 2: Setup Node.js locally (for build caching if needed)
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -44,16 +44,25 @@ jobs:
           overwrite: true # Overwrite existing files on EC2
 
       # Step 5: Install dependencies, build, and restart app
-      - name: Install dependencies and restart app
+      - name: Install dependencies, build, and restart app
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Load profile to get npm and pm2 in PATH
+            source ~/.bashrc || true
+            source ~/.profile || true
+
+            # Go to app directory
             cd "${{ secrets.EC2_PATH }}"
+
+            # Install dependencies and build app
             npm install
             npm run build
+
+            # Stop app if running, start with PM2
             pm2 stop next-app || true
             pm2 start npm --name "next-app" -- start
             pm2 save
