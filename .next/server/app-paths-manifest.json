@@ -1,3 +1,16 @@
 {
-  "/page": "app/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/dns-lookup/route": "app/api/dns-lookup/route.js",
+  "/api/domain-scan/route": "app/api/domain-scan/route.js",
+  "/attack-surface/page": "app/attack-surface/page.js",
+  "/api/subdomain-enum/route": "app/api/subdomain-enum/route.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dns-lookup/page": "app/dns-lookup/page.js",
+  "/host-discovery/page": "app/host-discovery/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/port-scanner/page": "app/port-scanner/page.js",
+  "/register/page": "app/register/page.js",
+  "/reports/page": "app/reports/page.js",
+  "/subdomain-enum/page": "app/subdomain-enum/page.js"
 }
