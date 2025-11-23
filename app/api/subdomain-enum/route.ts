@@ -152,8 +152,9 @@ export async function POST(request: NextRequest) {
         try {
           // Attempt zone transfer (will likely fail, but worth trying)
           // Note: Most DNS servers disable AXFR for security
-          const dnsPromises = dns.resolve(domain, 'NS')
           // Zone transfer attempt (simulated - actual AXFR requires special setup)
+          // Using dns.promises.resolve for promise-based API
+          await dns.promises.resolve(domain, 'NS')
         } catch (error) {
           // Zone transfer not allowed (expected)
         }
