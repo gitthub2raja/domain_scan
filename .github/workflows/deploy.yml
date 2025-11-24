@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout repo
+      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -18,9 +18,13 @@ jobs:
       - name: Build Docker image
         run: docker build -t next-app:latest .
 
-      # Step 3: Save Docker image as tar
-      - name: Save Docker image
+      # Step 3: Save Docker image to tar
+      - name: Save Docker image as TAR
         run: docker save next-app:latest -o next-app.tar
+
+      # 🔥 FIX: Allow SCP to access the tar file
+      - name: Fix tar permissions for SCP
+        run: sudo chmod 777 next-app.tar
 
       # Step 4: Copy Docker image to EC2
       - name: Copy Docker image to EC2
@@ -34,8 +38,8 @@ jobs:
           rm: true
           overwrite: true
 
-      # Step 5: Load Docker image and restart container on EC2
-      - name: Deploy Docker container on EC2
+      # Step 5: Deploy on EC2
+      - name: Deploy on EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
