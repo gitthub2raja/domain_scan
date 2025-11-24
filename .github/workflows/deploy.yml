@@ -1,4 +1,4 @@
-name: Deploy Next.js to EC2 via Docker
+name: Deploy Next.js to EC2
 
 on:
   push:
@@ -10,18 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Build Docker image
         run: |
           docker build -t next-app:latest .
 
-      - name: Save Docker image
+      - name: Save Docker image to tar
         run: |
           docker save next-app:latest -o next-app.tar
 
-      - name: Upload Docker image + compose
+      - name: Upload next-app.tar & docker-compose.yml
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -51,4 +51,4 @@ jobs:
             docker rm next-app || true
 
             docker compose down || true
-            docker compose up -d --force-recreate
+            docker compose up -d --build
