@@ -10,30 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # --------------------------
-      # 1. Checkout Code
-      # --------------------------
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      # --------------------------
-      # 2. Build Docker Image on GitHub runner
-      # --------------------------
       - name: Build Docker image
         run: |
           docker build -t next-app:latest .
 
-      # --------------------------
-      # 3. Save Image to .tar file
-      # --------------------------
-      - name: Save Docker image as tar
+      - name: Save Docker image
         run: |
           docker save next-app:latest -o next-app.tar
-          ls -lh next-app.tar
 
-      # --------------------------
-      # 4. Copy files to EC2
-      # --------------------------
       - name: Upload Docker image + compose
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -41,7 +28,6 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
 
-          # IMPORTANT: Use root folder
           source: |
             next-app.tar
             docker-compose.yml
@@ -50,10 +36,7 @@ jobs:
           overwrite: true
           rm: false
 
-      # --------------------------
-      # 5. SSH into EC2 & Deploy
-      # --------------------------
-      - name: Deploy Docker container on EC2
+      - name: Deploy on EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -62,15 +45,10 @@ jobs:
           script: |
             cd /home/${{ secrets.EC2_USER }}/domain_scan
 
-            echo "Loading Docker image..."
             docker load -i next-app.tar
 
-            echo "Stopping old container..."
             docker stop next-app || true
             docker rm next-app || true
 
-            echo "Deploying with docker-compose..."
             docker compose down || true
             docker compose up -d --force-recreate
-
-            echo "Deployment completed successfully!"
