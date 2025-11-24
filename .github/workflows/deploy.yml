@@ -19,21 +19,28 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
             echo "Deploying domain_scan application..."
+
+            # Go to home directory
             cd /home/ubuntu || exit
 
-            # Clone repo if it doesn't exist, else pull latest
-            if [ ! -d "domain_scan" ]; then
-              git clone https://github.com/gitthub2raja/domain_scan.git
-            else
-              cd domain_scan
-              git reset --hard
-              git pull origin main
-              cd ..
+            # Remove old directory if exists
+            if [ -d "domain_scan" ]; then
+              echo "Removing old domain_scan folder..."
+              rm -rf domain_scan
             fi
 
-            cd domain_scan
+            # Clone fresh repo
+            echo "Cloning repository..."
+            git clone https://github.com/gitthub2raja/domain_scan.git
+            cd domain_scan || exit
 
-            # Start Docker Compose
-            docker-compose up -d --build
+            # Make sure Docker daemon is running
+            echo "Starting Docker daemon if not running..."
+            sudo systemctl start docker || true
+
+            # Run Docker Compose
+            echo "Running Docker Compose..."
+            sudo docker-compose up -d --build
+
             echo "Deployment complete!"
           EOF
