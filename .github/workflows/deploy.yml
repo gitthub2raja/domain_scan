@@ -3,68 +3,51 @@ name: Deploy to EC2
 on:
   push:
     branches:
-      - main  # Trigger deployment on push to main branch
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout the repo
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Setup Node.js for build
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
-      # Step 3: Build Docker image locally
       - name: Build Docker image
         run: |
           docker build -t next-app:latest .
 
-      # Step 4: Save Docker image to a tar file
-      - name: Save Docker image
+      - name: Save Docker image as tar
         run: |
           docker save next-app:latest -o next-app.tar
 
-      # Step 5: Upload Docker image and docker-compose.yml to EC2
-      - name: Upload files to EC2
+      - name: Upload Docker image and docker-compose.yml to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
           source: |
             next-app.tar
             docker-compose.yml
           target: /home/${{ secrets.EC2_USER }}/domain_scan
           overwrite: true
           rm: false
-          port: 22
           timeout: 30s
           command_timeout: 10m
           use_insecure_cipher: false
-          debug: false
 
-      # Step 6: Install dependencies and run Docker Compose on EC2
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd /home/${{ secrets.EC2_USER }}/domain_scan
-
-            # Load Docker image
-            docker load -i next-app.tar
-
-            # Stop existing container if any
-            docker stop next-app || true
-            docker rm next-app || true
-
-            # Run docker-compose (ensure docker-compose is installed on EC2)
-            docker-compose up -d --build
+          port: 22
+          script:
