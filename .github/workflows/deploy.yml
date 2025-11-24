@@ -14,14 +14,12 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build Docker image
-        run: |
-          docker build -t next-app:latest .
+        run: docker build -t next-app:latest .
 
       - name: Save Docker image to tar
-        run: |
-          docker save next-app:latest -o next-app.tar
+        run: docker save next-app:latest -o next-app.tar
 
-      - name: Upload next-app.tar & docker-compose.yml
+      - name: Upload artifacts to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.EC2_HOST }}
