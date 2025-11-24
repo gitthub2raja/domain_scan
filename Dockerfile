@@ -1,29 +1,47 @@
-# Use Node.js LTS as base
-FROM node:20-alpine AS builder
-
-# Set working directory
+# Stage 1: Dependencies
+FROM node:18-alpine AS deps
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package.json package-lock.json ./
+# Copy package files
+COPY package.json package-lock.json* ./
 RUN npm ci
 
-# Copy all project files
-COPY . .
-
-# Build Next.js app
-RUN npm run build
-
-# Production image
-FROM node:20-alpine
-
+# Stage 2: Builder
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copy build from builder
-COPY --from=builder /app ./
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 
-# Expose port (Next.js default)
-EXPOSE 3000
+# Set environment variable for build
+ENV NEXT_TELEMETRY_DISABLED 1
 
-# Start the app
-CMD ["npm", "start"]
+# Build the application
+RUN npm run build
+
+# Stage 3: Runner
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Create a non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy standalone build files
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 80
+
+ENV PORT 80
+ENV HOSTNAME "0.0.0.0"
+
+CMD ["node", "server.js"]
+
