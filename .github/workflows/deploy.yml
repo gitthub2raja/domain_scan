@@ -1,4 +1,4 @@
-name: Deploy Next.js to EC2
+name: Deploy to EC2 (Docker)
 
 on:
   push:
@@ -10,16 +10,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout Code
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      # 2. Build Docker Image
       - name: Build Docker image
-        run: docker build -t next-app:latest .
+        run: |
+          docker build -t next-app:latest .
 
-      - name: Save Docker image to tar
-        run: docker save next-app:latest -o next-app.tar
+      # 3. Save image to tar file
+      - name: Save image as TAR
+        run: |
+          docker save -o next-app.tar next-app:latest
 
-      - name: Upload artifacts to EC2
+      # 4. Upload TAR + docker-compose.yml to EC2
+      - name: Upload files to EC2
         uses: appleboy/scp-action@v0.1.5
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -34,7 +40,8 @@ jobs:
           overwrite: true
           rm: false
 
-      - name: Deploy on EC2
+      # 5. Run container on EC2
+      - name: Deploy on EC2 using SSH
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -43,10 +50,12 @@ jobs:
           script: |
             cd /home/${{ secrets.EC2_USER }}/domain_scan
 
+            # Load Docker Image
             docker load -i next-app.tar
 
+            # Stop existing container
             docker stop next-app || true
             docker rm next-app || true
 
-            docker compose down || true
-            docker compose up -d --build
+            # Start using docker-compose
+            docker compose up -d --force-recreate
